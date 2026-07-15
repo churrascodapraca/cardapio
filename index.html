@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cardápio - Churrasco da Praça</title>
+    <style>
+        :root {
+            --bg-base: #050505;
+            --bg-panel: #121212;
+            --fogo: #ff5722;
+            --texto: #f8fafc;
+            --texto-dim: #71717a;
+            --borda: #27272a;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--texto);
+            padding-bottom: 50px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #000000 0%, var(--bg-panel) 100%);
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--fogo);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .header h1 span { color: var(--fogo); }
+        .header p { color: var(--texto-dim); font-size: 13px; }
+
+        .container { padding: 20px; }
+
+        .produto-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--borda);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .produto-card:active { transform: scale(0.98); border-color: var(--fogo); }
+
+        .produto-info { flex: 1; }
+        .produto-nome { font-size: 16px; font-weight: bold; color: var(--texto); margin-bottom: 5px; }
+        .produto-desc { font-size: 12px; color: var(--texto-dim); margin-bottom: 10px; line-height: 1.4; }
+        .produto-preco { font-size: 18px; font-weight: 900; color: #10b981; }
+
+        .btn-pedir {
+            background: rgba(255, 87, 34, 0.1);
+            color: var(--fogo);
+            border: 1px solid var(--fogo);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .status-msg {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--texto-dim);
+            font-size: 15px;
+        }
+
+        .rodape {
+            text-align: center;
+            padding: 20px;
+            color: var(--texto-dim);
+            font-size: 11px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1>Churrasco <span>Da Praça</span></h1>
+        <p>Faça seu pedido diretamente com o garçom</p>
+    </header>
+
+    <div class="container">
+        <div class="status-msg" id="msgStatus">
+            🔄 Carregando o cardápio...
+        </div>
+        <div id="listaProdutos"></div>
+    </div>
+
+    <div class="rodape">
+        <p>Preços sujeitos a alteração sem aviso prévio.</p>
+        <p>Taxa de serviço não inclusa.</p>
+    </div>
+
+    <script>
+        function fmtPreco(v) {
+            return (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function descricaoPara(produto) {
+            return produto.tipo === 'porcionado'
+                ? "Vendido por peso — o garçom te mostra as porções disponíveis."
+                : "Acompanha molho da casa e farofa.";
+        }
+
+        function precoPara(produto) {
+            return produto.tipo === 'porcionado'
+                ? `A partir de R$ ${fmtPreco(produto.precoVenda)}`
+                : `R$ ${fmtPreco(produto.precoVenda)}`;
+        }
+
+        function renderizarProdutos(produtos) {
+            const msg = document.getElementById('msgStatus');
+            const lista = document.getElementById('listaProdutos');
+
+            if (!produtos || produtos.length === 0) {
+                lista.innerHTML = '';
+                msg.style.display = 'block';
+                msg.innerHTML = "O cardápio está sendo atualizado. <br><br> Volte em alguns minutos!";
+                return;
+            }
+
+            msg.style.display = 'none';
+            lista.innerHTML = produtos.map(prod => `
+                <div class="produto-card">
+                    <div class="produto-info">
+                        <div class="produto-nome">${prod.nome}</div>
+                        <div class="produto-desc">${descricaoPara(prod)}</div>
+                        <div class="produto-preco">${precoPara(prod)}</div>
+                    </div>
+                    <button class="btn-pedir" onclick="alert('Chame o garçom e peça: ${String(prod.nome).replace(/'/g, "\\'")}')">Eu Quero</button>
+                </div>
+            `).join('');
+        }
+
+        async function carregarCardapio() {
+            try {
+                // o ?ts= garante que o celular sempre pegue a versão mais nova
+                // publicada (fura o cache do GitHub Pages)
+                const resposta = await fetch('cardapio.json?ts=' + Date.now(), { cache: 'no-store' });
+                if (!resposta.ok) throw new Error('HTTP ' + resposta.status);
+                renderizarProdutos(await resposta.json());
+            } catch (e) {
+                const lista = document.getElementById('listaProdutos');
+                if (lista.innerHTML !== '') return; // já tem cardápio na tela, não apaga por causa de uma falha momentânea
+                const msg = document.getElementById('msgStatus');
+                msg.style.display = 'block';
+                msg.innerHTML = "Não consegui carregar o cardápio agora. <br><br> Confira sua internet e puxe a tela pra baixo pra atualizar.";
+            }
+        }
+
+        window.onload = carregarCardapio;
+        // atualiza sozinho de tempo em tempo pra pegar mudanças de preço
+        setInterval(carregarCardapio, 60000);
+    </script>
+</body>
+</html>
