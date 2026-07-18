@@ -91,7 +91,13 @@
             font-size: 11px;
             margin-top: 30px;
         }
-        .abas-wrap { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; -webkit-overflow-scrolling: touch; }
+        .abas-wrap { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 14px; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #FF5722 #2b2b2b; }
+        .abas-wrap::-webkit-scrollbar { height: 8px; -webkit-appearance: none; }
+        .abas-wrap::-webkit-scrollbar-track { background: #2b2b2b; border-radius: 10px; }
+        .abas-wrap::-webkit-scrollbar-thumb { background: #FF5722; border-radius: 10px; }
+        .dica-deslize { text-align: center; color: #a1a1aa; font-size: 12px; margin: -6px 0 10px; display: none; }
+        .dica-deslize.mostrar { display: block; animation: pisca 2s ease-in-out infinite; }
+        @keyframes pisca { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
         .aba-cat { flex-shrink: 0; background: #181818; color: #a1a1aa; border: 1px solid #2b2b2b; border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: bold; cursor: pointer; }
         .aba-cat.ativa { background: #FF5722; color: #fff; border-color: #FF5722; }
         .produto-foto { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; margin-right: 12px; flex-shrink: 0; }
@@ -113,6 +119,7 @@
             🔄 Carregando o cardápio...
         </div>
         <div id="abasCategorias" class="abas-wrap"></div>
+        <div id="dicaDeslize" class="dica-deslize">👈 deslize pro lado pra ver mais categorias 👉</div>
         <div id="listaProdutos"></div>
         <div id="barraPedido" style="display:none;">
             <span id="resumoBarraPedido"></span>
@@ -134,9 +141,16 @@
         }
 
         function descricaoPara(produto) {
+            // Descrição personalizada pelo dono manda em TUDO:
+            //  • texto preenchido  -> mostra esse texto
+            //  • texto vazio ('')  -> não mostra descrição nenhuma
+            //  • indefinida (null/produto antigo) -> cai no padrão por tipo
+            if (produto.descricao !== undefined && produto.descricao !== null) {
+                return produto.descricao; // pode ser '' (sem descrição)
+            }
             if (produto.tipo === 'porcionado') return "Vendido por peso — o garçom te mostra as porções disponíveis.";
             if (produto.tipo === 'estimado') return "Feito na hora na nossa cozinha.";
-            return "Acompanha molho da casa e farofa.";
+            return "";
         }
 
         function precoPara(produto) {
@@ -158,6 +172,8 @@
             if (presentes.length <= 1) { el.innerHTML = ''; return; }
             const abas = ['Tudo', ...presentes];
             el.innerHTML = abas.map(a => `<button class="aba-cat${a === abaAtiva ? ' ativa' : ''}" onclick="mudarAba('${a.replace(/'/g, "\\'")}')">${a}</button>`).join('');
+            const dica = document.getElementById('dicaDeslize');
+            if (dica) dica.className = 'dica-deslize' + (abas.length > 3 ? ' mostrar' : '');
         }
 
         function mudarAba(aba) {
@@ -191,7 +207,7 @@
                     ${foto}
                     <div class="produto-info">
                         <div class="produto-nome">${prod.nome}</div>
-                        <div class="produto-desc">${descricaoPara(prod)}</div>
+                        ${descricaoPara(prod) ? `<div class="produto-desc">${descricaoPara(prod)}</div>` : ''}
                         <div class="produto-preco">${precoPara(prod)}</div>
                     </div>
                     ${botao}
