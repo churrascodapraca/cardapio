@@ -91,6 +91,13 @@
             font-size: 11px;
             margin-top: 30px;
         }
+        .abas-wrap { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; -webkit-overflow-scrolling: touch; }
+        .aba-cat { flex-shrink: 0; background: #181818; color: #a1a1aa; border: 1px solid #2b2b2b; border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: bold; cursor: pointer; }
+        .aba-cat.ativa { background: #FF5722; color: #fff; border-color: #FF5722; }
+        .produto-foto { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; margin-right: 12px; flex-shrink: 0; }
+        #barraPedido { position: fixed; left: 12px; right: 12px; bottom: 12px; background: #128C7E; color: #fff; border-radius: 14px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); z-index: 50; font-weight: bold; }
+        .btn-barra-enviar { background: #25D366; color: #fff; border: none; border-radius: 10px; padding: 10px 14px; font-weight: bold; cursor: pointer; }
+        .btn-barra-limpar { background: transparent; color: #d1fae5; border: 1px solid rgba(255,255,255,0.4); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -104,7 +111,15 @@
         <div class="status-msg" id="msgStatus">
             🔄 Carregando o cardápio...
         </div>
+        <div id="abasCategorias" class="abas-wrap"></div>
         <div id="listaProdutos"></div>
+        <div id="barraPedido" style="display:none;">
+            <span id="resumoBarraPedido"></span>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-barra-limpar" onclick="limparPedido()">Limpar</button>
+                <button class="btn-barra-enviar" onclick="enviarPedidoWhats()">📱 Enviar no WhatsApp</button>
+            </div>
+        </div>
     </div>
 
     <div class="rodape">
@@ -118,22 +133,44 @@
         }
 
         function descricaoPara(produto) {
-            return produto.tipo === 'porcionado'
-                ? "Vendido por peso — o garçom te mostra as porções disponíveis."
-                : "Acompanha molho da casa e farofa.";
+            if (produto.tipo === 'porcionado') return "Vendido por peso — o garçom te mostra as porções disponíveis.";
+            if (produto.tipo === 'estimado') return "Feito na hora na nossa cozinha.";
+            return "Acompanha molho da casa e farofa.";
         }
 
         function precoPara(produto) {
-            return produto.tipo === 'porcionado'
+            return (produto.tipo === 'porcionado' || produto.temVariacoes)
                 ? `A partir de R$ ${fmtPreco(produto.precoVenda)}`
                 : `R$ ${fmtPreco(produto.precoVenda)}`;
         }
 
-        function renderizarProdutos(produtos) {
+        // Estado do cardápio v2
+        let configCardapio = { pedidosZap: false, telefone: '' };
+        let itensCardapio = [];
+        let abaAtiva = 'Tudo';
+        let pedido = {}; // id -> {nome, preco, qtd} (modo pedido WhatsApp)
+        const ORDEM_ABAS = ['Espetos', 'Bebidas', 'Copões', 'Comida', 'Tabacaria', 'Doces & Balas', 'Outros'];
+
+        function renderizarAbas() {
+            const el = document.getElementById('abasCategorias');
+            const presentes = ORDEM_ABAS.filter(cat => itensCardapio.some(p => (p.categoria || 'Outros') === cat));
+            if (presentes.length <= 1) { el.innerHTML = ''; return; }
+            const abas = ['Tudo', ...presentes];
+            el.innerHTML = abas.map(a => `<button class="aba-cat${a === abaAtiva ? ' ativa' : ''}" onclick="mudarAba('${a.replace(/'/g, "\\'")}')">${a}</button>`).join('');
+        }
+
+        function mudarAba(aba) {
+            abaAtiva = aba;
+            renderizarAbas();
+            renderizarProdutos();
+        }
+
+        function renderizarProdutos() {
             const msg = document.getElementById('msgStatus');
             const lista = document.getElementById('listaProdutos');
+            const produtos = abaAtiva === 'Tudo' ? itensCardapio : itensCardapio.filter(p => (p.categoria || 'Outros') === abaAtiva);
 
-            if (!produtos || produtos.length === 0) {
+            if (!itensCardapio || itensCardapio.length === 0) {
                 lista.innerHTML = '';
                 msg.style.display = 'block';
                 msg.innerHTML = "O cardápio está sendo atualizado. <br><br> Volte em alguns minutos!";
@@ -141,16 +178,65 @@
             }
 
             msg.style.display = 'none';
-            lista.innerHTML = produtos.map(prod => `
+            const modoPedido = configCardapio.pedidosZap && configCardapio.telefone;
+            lista.innerHTML = produtos.map(prod => {
+                const foto = prod.img ? `<img class="produto-foto" src="${prod.img}" alt="">` : '';
+                const qtdNoPedido = pedido[prod.id] ? pedido[prod.id].qtd : 0;
+                const botao = modoPedido
+                    ? `<button class="btn-pedir" onclick="adicionarAoPedido(${prod.id})">${qtdNoPedido > 0 ? qtdNoPedido + ' no pedido · +1' : '+ Adicionar'}</button>`
+                    : `<button class="btn-pedir" onclick="alert('Chame o garçom e peça: ${String(prod.nome).replace(/'/g, "\\'")}')">Eu Quero</button>`;
+                return `
                 <div class="produto-card">
+                    ${foto}
                     <div class="produto-info">
                         <div class="produto-nome">${prod.nome}</div>
                         <div class="produto-desc">${descricaoPara(prod)}</div>
                         <div class="produto-preco">${precoPara(prod)}</div>
                     </div>
-                    <button class="btn-pedir" onclick="alert('Chame o garçom e peça: ${String(prod.nome).replace(/'/g, "\\'")}')">Eu Quero</button>
-                </div>
-            `).join('');
+                    ${botao}
+                </div>`;
+            }).join('');
+            atualizarBarraPedido();
+        }
+
+        // --- MODO PEDIDO (só quando ativado pelo dono no sistema) ---
+        function adicionarAoPedido(id) {
+            const prod = itensCardapio.find(p => p.id === id);
+            if (!prod) return;
+            if (!pedido[id]) pedido[id] = { nome: prod.nome, preco: Number(prod.precoVenda) || 0, qtd: 0, aPartirDe: !!(prod.temVariacoes || prod.tipo === 'porcionado') };
+            pedido[id].qtd++;
+            renderizarProdutos();
+        }
+
+        function limparPedido() {
+            pedido = {};
+            renderizarProdutos();
+        }
+
+        function atualizarBarraPedido() {
+            const barra = document.getElementById('barraPedido');
+            if (!barra) return;
+            const itens = Object.values(pedido);
+            const totalQtd = itens.reduce((s, i) => s + i.qtd, 0);
+            if (!(configCardapio.pedidosZap && configCardapio.telefone) || totalQtd === 0) { barra.style.display = 'none'; return; }
+            const totalValor = itens.reduce((s, i) => s + i.qtd * i.preco, 0);
+            barra.style.display = 'flex';
+            document.getElementById('resumoBarraPedido').innerText = `${totalQtd} ${totalQtd === 1 ? 'item' : 'itens'} · R$ ${fmtPreco(totalValor)}`;
+        }
+
+        function enviarPedidoWhats() {
+            const itens = Object.values(pedido).filter(i => i.qtd > 0);
+            if (itens.length === 0) return;
+            const nomeCliente = prompt("Seu nome (e mesa, se estiver no bar):");
+            if (nomeCliente === null) return;
+            let temAPartirDe = false;
+            const linhas = itens.map(i => {
+                if (i.aPartirDe) temAPartirDe = true;
+                return `${i.qtd}x ${i.nome} — R$ ${fmtPreco(i.qtd * i.preco)}${i.aPartirDe ? ' (a partir de)' : ''}`;
+            });
+            const total = itens.reduce((s, i) => s + i.qtd * i.preco, 0);
+            const msg = `🔥 *PEDIDO — Churrasco da Praça*\n\n${linhas.join('\n')}\n\n*Total: R$ ${fmtPreco(total)}*${temAPartirDe ? ' (itens por tamanho/peso confirmados na hora)' : ''}\n\nCliente: ${nomeCliente || 'não informado'}`;
+            window.open(`https://wa.me/55${configCardapio.telefone}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         async function carregarCardapio() {
@@ -159,7 +245,17 @@
                 // publicada (fura o cache do GitHub Pages)
                 const resposta = await fetch('cardapio.json?ts=' + Date.now(), { cache: 'no-store' });
                 if (!resposta.ok) throw new Error('HTTP ' + resposta.status);
-                renderizarProdutos(await resposta.json());
+                const dados = await resposta.json();
+                if (Array.isArray(dados)) {
+                    // formato antigo (só a lista)
+                    itensCardapio = dados;
+                    configCardapio = { pedidosZap: false, telefone: '' };
+                } else {
+                    itensCardapio = dados.itens || [];
+                    configCardapio = dados.config || { pedidosZap: false, telefone: '' };
+                }
+                renderizarAbas();
+                renderizarProdutos();
             } catch (e) {
                 const lista = document.getElementById('listaProdutos');
                 if (lista.innerHTML !== '') return; // já tem cardápio na tela, não apaga por causa de uma falha momentânea
