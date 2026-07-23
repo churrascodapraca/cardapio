@@ -78,33 +78,46 @@
 
         .container { padding: 20px; max-width: 640px; margin: 0 auto; }
 
-        .produto-card {
-            background: linear-gradient(155deg, rgba(30,30,36,0.9), rgba(22,22,26,0.95));
+        /* ===== Painel por categoria — igual ao cardápio impresso: capa de fotos
+           reais no topo (quando a categoria tem) + lista tipográfica com
+           pontilhado embaixo. Nada de ícone/adesivo por produto. ===== */
+        .categoria-painel {
+            background: linear-gradient(155deg, rgba(30,30,36,0.92), rgba(18,18,22,0.96));
             backdrop-filter: blur(8px);
             border: 1px solid var(--borda);
-            border-radius: 16px;
-            padding: 14px;
-            margin-bottom: 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
-            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-            position: relative;
+            border-radius: 18px;
+            margin-bottom: 22px;
             overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
         }
-        .produto-card::before {
-            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-            background: var(--grad-fogo); opacity: 0; transition: 0.2s;
+        .categoria-titulo-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px; background: linear-gradient(90deg, rgba(255,87,34,0.16), transparent);
+            border-bottom: 1px solid var(--borda);
         }
-        .produto-card:hover::before { opacity: 1; }
+        .categoria-titulo-bar h2 {
+            font-family: var(--fonte-display); font-size: 18px; letter-spacing: 1px;
+            text-transform: uppercase; color: var(--texto); font-weight: 600;
+        }
+        .categoria-capa { display: grid; gap: 2px; }
+        .categoria-capa.capa-1 { grid-template-columns: 1fr; }
+        .categoria-capa.capa-4 { grid-template-columns: 1fr 1fr; }
+        .categoria-capa img { width: 100%; height: 130px; object-fit: cover; display: block; }
+        .categoria-capa.capa-1 img { height: 170px; }
+        .categoria-itens { padding: 6px 18px 14px; }
+        .item-linha {
+            display: flex; align-items: baseline; gap: 8px; padding: 11px 0;
+            border-bottom: 1px dashed var(--borda);
+        }
+        .item-linha:last-child { border-bottom: none; }
+        .item-nome-wrap { flex-shrink: 0; }
+        .item-nome-wrap .item-nome { font-size: 15px; font-weight: 600; color: var(--texto); }
+        .item-nome-wrap .item-desc { display: block; font-size: 11.5px; color: var(--texto-dim); margin-top: 2px; }
+        .item-pontilhado { flex: 1; border-bottom: 2px dotted var(--borda); margin-bottom: 5px; min-width: 20px; }
+        .item-preco-wrap { flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
+        .item-preco-wrap .item-preco { font-family: var(--fonte-mono); font-weight: 800; font-size: 15px; color: var(--verde); text-shadow: 0 0 12px rgba(16,185,129,0.4); white-space: nowrap; }
+        .item-linha .btn-pedir { padding: 7px 12px; font-size: 12px; flex-shrink: 0; }
 
-        .produto-card:active { transform: scale(0.98); border-color: var(--fogo); }
-
-        .produto-info { flex: 1; }
-        .produto-nome { font-size: 17px; font-weight: 700; color: var(--texto); margin-bottom: 4px; }
-        .produto-desc { font-size: 12px; color: var(--texto-dim); margin-bottom: 10px; line-height: 1.4; }
-        .produto-preco { font-size: 20px; font-weight: 800; font-family: var(--fonte-mono); color: var(--verde); }
 
         .btn-pedir {
             background: rgba(255, 87, 34, 0.12);
@@ -144,7 +157,6 @@
         @keyframes pisca { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
         .aba-cat { flex-shrink: 0; background: var(--bg-elevado); color: var(--texto-dim); border: 1px solid var(--borda); border-radius: 20px; padding: 9px 18px; font-size: 13px; font-weight: 600; font-family: var(--fonte-display); letter-spacing: 0.5px; cursor: pointer; transition: 0.2s; }
         .aba-cat.ativa { background: var(--grad-fogo); color: #fff; border-color: var(--fogo); box-shadow: 0 2px 12px rgba(255,87,34,0.4); }
-        .produto-foto { width: 84px; height: 84px; object-fit: cover; border-radius: 12px; margin-right: 14px; flex-shrink: 0; border: 1px solid var(--borda); }
         #barraPedido { position: fixed; left: 12px; right: 12px; bottom: 12px; background: #128C7E; color: #fff; border-radius: 14px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); z-index: 50; font-weight: bold; }
         .btn-barra-enviar { background: #25D366; color: #fff; border: none; border-radius: 10px; padding: 10px 14px; font-weight: bold; cursor: pointer; }
         .btn-barra-limpar { background: transparent; color: #d1fae5; border: 1px solid rgba(255,255,255,0.4); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
@@ -169,12 +181,11 @@
         .fagulhas span:nth-child(4){ left:71%; animation-delay:2.2s; background:var(--ambar); box-shadow:0 0 8px var(--ambar); }
         .fagulhas span:nth-child(5){ left:86%; animation-delay:3.1s; }
         @keyframes card-entra { from { opacity:0; transform: translateY(14px); } to { opacity:1; transform:none; } }
-        .produto-card { animation: card-entra 0.45s ease backwards; }
-        .produto-card:nth-child(1){ animation-delay:0.05s; } .produto-card:nth-child(2){ animation-delay:0.1s; }
-        .produto-card:nth-child(3){ animation-delay:0.15s; } .produto-card:nth-child(4){ animation-delay:0.2s; }
-        .produto-card:nth-child(5){ animation-delay:0.25s; } .produto-card:nth-child(6){ animation-delay:0.3s; }
-        .produto-card:nth-child(7){ animation-delay:0.35s; } .produto-card:nth-child(8){ animation-delay:0.4s; }
-        .produto-preco { text-shadow: 0 0 12px rgba(16,185,129,0.45); }
+        .categoria-painel { animation: card-entra 0.45s ease backwards; }
+        .categoria-painel:nth-child(1){ animation-delay:0.05s; } .categoria-painel:nth-child(2){ animation-delay:0.12s; }
+        .categoria-painel:nth-child(3){ animation-delay:0.19s; } .categoria-painel:nth-child(4){ animation-delay:0.26s; }
+        .categoria-painel:nth-child(5){ animation-delay:0.33s; } .categoria-painel:nth-child(6){ animation-delay:0.4s; }
+        .categoria-painel:nth-child(7){ animation-delay:0.47s; }
         @keyframes grad-vivo { 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
         .btn-pedir:active { background-image: linear-gradient(120deg, #dc2626, #ff5722, #f59e0b); background-size:220% 100%; animation: grad-vivo 1.2s ease infinite; border-color: transparent; }
         body { box-shadow: inset 0 0 140px rgba(0,0,0,0.5); }
@@ -243,6 +254,19 @@
         let pedido = {}; // id -> {nome, preco, qtd} (modo pedido WhatsApp)
         const ORDEM_ABAS = ['Espetos', 'Bebidas', 'Copões', 'Comida', 'Tabacaria', 'Doces & Balas', 'Outros'];
 
+        // Fotos de capa REAIS por categoria (banco de imagens livre, sem marca) —
+        // o mesmo espírito do cardápio impresso: fotos de verdade, não ícones.
+        const CAPAS_CATEGORIA = {
+            'Espetos': ['https://images.pexels.com/photos/36912020/pexels-photo-36912020.jpeg?auto=compress&cs=tinysrgb&w=900'],
+            'Comida': [
+                'https://images.pexels.com/photos/11485199/pexels-photo-11485199.jpeg?auto=compress&cs=tinysrgb&w=500',
+                'https://images.pexels.com/photos/37358770/pexels-photo-37358770.jpeg?auto=compress&cs=tinysrgb&w=500',
+                'https://images.pexels.com/photos/5652266/pexels-photo-5652266.jpeg?auto=compress&cs=tinysrgb&w=500',
+                'https://images.pexels.com/photos/8491087/pexels-photo-8491087.jpeg?auto=compress&cs=tinysrgb&w=500',
+            ],
+            'Tabacaria': ['https://images.pexels.com/photos/7518765/pexels-photo-7518765.jpeg?auto=compress&cs=tinysrgb&w=900'],
+        };
+
         function renderizarAbas() {
             const el = document.getElementById('abasCategorias');
             const presentes = ORDEM_ABAS.filter(cat => itensCardapio.some(p => (p.categoria || 'Outros') === cat));
@@ -259,10 +283,34 @@
             renderizarProdutos();
         }
 
+        // Monta UMA linha de produto: nome .......... preço (estilo impresso).
+        // Se o dono subiu uma foto REAL manual pro produto (não é ícone
+        // automático), ela some ao lado, pequena e discreta.
+        function linhaProduto(prod, modoPedido) {
+            const qtdNoPedido = pedido[prod.id] ? pedido[prod.id].qtd : 0;
+            const botao = modoPedido
+                ? `<button class="btn-pedir" onclick="adicionarAoPedido(${prod.id})">${qtdNoPedido > 0 ? qtdNoPedido + ' · +1' : '+ Pedir'}</button>`
+                : `<button class="btn-pedir" onclick="alert('Chame o garçom e peça: ${String(prod.nome).replace(/'/g, "\\'")}')">Eu Quero</button>`;
+            const desc = descricaoPara(prod);
+            const fotoManual = prod.img ? `<img src="${prod.img}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : '';
+            return `
+                <div class="item-linha">
+                    ${fotoManual}
+                    <div class="item-nome-wrap">
+                        <span class="item-nome">${prod.nome}</span>
+                        ${desc ? `<span class="item-desc">${desc}</span>` : ''}
+                    </div>
+                    <div class="item-pontilhado"></div>
+                    <div class="item-preco-wrap">
+                        <span class="item-preco">${precoPara(prod)}</span>
+                        ${botao}
+                    </div>
+                </div>`;
+        }
+
         function renderizarProdutos() {
             const msg = document.getElementById('msgStatus');
             const lista = document.getElementById('listaProdutos');
-            const produtos = abaAtiva === 'Tudo' ? itensCardapio : itensCardapio.filter(p => (p.categoria || 'Outros') === abaAtiva);
 
             if (!itensCardapio || itensCardapio.length === 0) {
                 lista.innerHTML = '';
@@ -273,21 +321,22 @@
 
             msg.style.display = 'none';
             const modoPedido = configCardapio.pedidosZap && configCardapio.telefone;
-            lista.innerHTML = produtos.map(prod => {
-                const foto = prod.img ? `<img class="produto-foto" src="${prod.img}" alt="">` : '';
-                const qtdNoPedido = pedido[prod.id] ? pedido[prod.id].qtd : 0;
-                const botao = modoPedido
-                    ? `<button class="btn-pedir" onclick="adicionarAoPedido(${prod.id})">${qtdNoPedido > 0 ? qtdNoPedido + ' no pedido · +1' : '+ Adicionar'}</button>`
-                    : `<button class="btn-pedir" onclick="alert('Chame o garçom e peça: ${String(prod.nome).replace(/'/g, "\\'")}')">Eu Quero</button>`;
+            const categorias = abaAtiva === 'Tudo' ? ORDEM_ABAS : [abaAtiva];
+
+            lista.innerHTML = categorias.map(cat => {
+                const itens = itensCardapio.filter(p => (p.categoria || 'Outros') === cat);
+                if (itens.length === 0) return '';
+                const capas = CAPAS_CATEGORIA[cat];
+                const capaHtml = capas
+                    ? `<div class="categoria-capa ${capas.length > 1 ? 'capa-4' : 'capa-1'}">${capas.map(u => `<img src="${u}" alt="" loading="lazy" onerror="this.style.display='none'">`).join('')}</div>`
+                    : '';
                 return `
-                <div class="produto-card">
-                    ${foto}
-                    <div class="produto-info">
-                        <div class="produto-nome">${prod.nome}</div>
-                        ${descricaoPara(prod) ? `<div class="produto-desc">${descricaoPara(prod)}</div>` : ''}
-                        <div class="produto-preco">${precoPara(prod)}</div>
+                <div class="categoria-painel">
+                    <div class="categoria-titulo-bar"><h2>${cat}</h2></div>
+                    ${capaHtml}
+                    <div class="categoria-itens">
+                        ${itens.map(p => linhaProduto(p, modoPedido)).join('')}
                     </div>
-                    ${botao}
                 </div>`;
             }).join('');
             atualizarBarraPedido();
