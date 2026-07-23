@@ -104,19 +104,28 @@
         .categoria-capa.capa-4 { grid-template-columns: 1fr 1fr; }
         .categoria-capa img { width: 100%; height: 130px; object-fit: cover; display: block; }
         .categoria-capa.capa-1 img { height: 170px; }
-        .categoria-itens { padding: 6px 18px 14px; }
-        .item-linha {
-            display: flex; align-items: baseline; gap: 8px; padding: 11px 0;
-            border-bottom: 1px dashed var(--borda);
+        /* Grade COMPARTILHADA por painel: nome (flexível) | preço | botão.
+           Como todo item é filho direto do mesmo grid (via display:contents
+           na linha), as 3 colunas alinham perfeitamente entre todas as
+           linhas — o botão "Eu Quero" fica sempre na mesma posição,
+           não importa o tamanho do nome. Sem pontilhado: o alinhamento em
+           coluna já organiza o olho, sem precisar de linha guia. */
+        .categoria-itens {
+            display: grid; grid-template-columns: 1fr auto auto;
+            column-gap: 10px; row-gap: 0; padding: 4px 14px 10px;
         }
-        .item-linha:last-child { border-bottom: none; }
-        .item-nome-wrap { flex-shrink: 0; }
-        .item-nome-wrap .item-nome { font-size: 15px; font-weight: 600; color: var(--texto); }
-        .item-nome-wrap .item-desc { display: block; font-size: 11.5px; color: var(--texto-dim); margin-top: 2px; }
-        .item-pontilhado { flex: 1; border-bottom: 2px dotted var(--borda); margin-bottom: 5px; min-width: 20px; }
-        .item-preco-wrap { flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
-        .item-preco-wrap .item-preco { font-family: var(--fonte-mono); font-weight: 800; font-size: 15px; color: var(--verde); text-shadow: 0 0 12px rgba(16,185,129,0.4); white-space: nowrap; }
-        .item-linha .btn-pedir { padding: 7px 12px; font-size: 12px; flex-shrink: 0; }
+        .item-linha { display: contents; }
+        .item-linha > * { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .item-linha:last-child > * { border-bottom: none; }
+        .cel-nome { min-width: 0; }
+        .cel-nome .item-nome { font-size: 14.5px; font-weight: 600; color: var(--texto); display: block; line-height: 1.3; }
+        .cel-nome .item-desc { display: block; font-size: 11px; color: var(--texto-dim); margin-top: 2px; }
+        .cel-preco { display: flex; align-items: center; font-family: var(--fonte-mono); font-weight: 800; font-size: 14.5px; color: var(--verde); text-shadow: 0 0 10px rgba(16,185,129,0.35); white-space: nowrap; }
+        .cel-botao { display: flex; align-items: center; }
+        .cel-botao .btn-pedir { padding: 9px 13px; font-size: 11.5px; white-space: nowrap; min-height: 34px; }
+        /* subcabeçalho de subcategoria — ocupa a linha inteira da grade */
+        .subcategoria-titulo { grid-column: 1 / -1; font-family: var(--fonte-display); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--fogo); font-weight: 600; padding: 14px 0 6px; opacity: 0.9; }
+        .subcategoria-titulo:first-child { padding-top: 6px; }
 
 
         .btn-pedir {
@@ -252,19 +261,30 @@
         let itensCardapio = [];
         let abaAtiva = 'Tudo';
         let pedido = {}; // id -> {nome, preco, qtd} (modo pedido WhatsApp)
-        const ORDEM_ABAS = ['Espetos', 'Bebidas', 'Copões', 'Comida', 'Tabacaria', 'Doces & Balas', 'Outros'];
+        const ORDEM_ABAS = ['Comida', 'Bebidas', 'Copões', 'Tabacaria', 'Doces & Balas', 'Outros'];
 
-        // Fotos de capa REAIS por categoria (banco de imagens livre, sem marca) —
-        // o mesmo espírito do cardápio impresso: fotos de verdade, não ícones.
+        // Subcategorias dentro de cada aba (mesma taxonomia editável do sistema).
+        // Categorias fora daqui listam os itens direto, sem subtítulo.
+        const SUBCATEGORIAS_CARDAPIO = {
+            'Bebidas': ['Alcoólicas', 'Não Alcoólicas'],
+            'Comida': ['Espetos', 'Acompanhamentos', 'Porções'],
+        };
+
+        // Fotos de capa REAIS (banco de imagens livre, sem marca) — o mesmo
+        // espírito do cardápio impresso: fotos de verdade, não ícones.
+        // Categorias sem subcategoria usam CAPAS_CATEGORIA; categorias COM
+        // subcategoria (Comida) usam uma capa por subgrupo, mais precisa.
         const CAPAS_CATEGORIA = {
+            'Tabacaria': ['https://images.pexels.com/photos/7518765/pexels-photo-7518765.jpeg?auto=compress&cs=tinysrgb&w=900'],
+        };
+        const CAPAS_SUBCATEGORIA = {
             'Espetos': ['https://images.pexels.com/photos/36912020/pexels-photo-36912020.jpeg?auto=compress&cs=tinysrgb&w=900'],
-            'Comida': [
+            'Acompanhamentos': [
                 'https://images.pexels.com/photos/11485199/pexels-photo-11485199.jpeg?auto=compress&cs=tinysrgb&w=500',
                 'https://images.pexels.com/photos/37358770/pexels-photo-37358770.jpeg?auto=compress&cs=tinysrgb&w=500',
                 'https://images.pexels.com/photos/5652266/pexels-photo-5652266.jpeg?auto=compress&cs=tinysrgb&w=500',
                 'https://images.pexels.com/photos/8491087/pexels-photo-8491087.jpeg?auto=compress&cs=tinysrgb&w=500',
             ],
-            'Tabacaria': ['https://images.pexels.com/photos/7518765/pexels-photo-7518765.jpeg?auto=compress&cs=tinysrgb&w=900'],
         };
 
         function renderizarAbas() {
@@ -283,29 +303,47 @@
             renderizarProdutos();
         }
 
-        // Monta UMA linha de produto: nome .......... preço (estilo impresso).
-        // Se o dono subiu uma foto REAL manual pro produto (não é ícone
-        // automático), ela some ao lado, pequena e discreta.
+        // Monta UMA linha de produto nas 3 colunas da grade: nome | preço |
+        // botão. Como a linha é "display:contents", as 3 células entram
+        // direto na grade do painel — por isso o botão fica sempre alinhado
+        // com o de todas as outras linhas, não importa o tamanho do nome.
         function linhaProduto(prod, modoPedido) {
             const qtdNoPedido = pedido[prod.id] ? pedido[prod.id].qtd : 0;
             const botao = modoPedido
                 ? `<button class="btn-pedir" onclick="adicionarAoPedido(${prod.id})">${qtdNoPedido > 0 ? qtdNoPedido + ' · +1' : '+ Pedir'}</button>`
                 : `<button class="btn-pedir" onclick="alert('Chame o garçom e peça: ${String(prod.nome).replace(/'/g, "\\'")}')">Eu Quero</button>`;
             const desc = descricaoPara(prod);
-            const fotoManual = prod.img ? `<img src="${prod.img}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : '';
+            const fotoManual = prod.img ? `<img src="${prod.img}" alt="" style="width:38px;height:38px;object-fit:cover;border-radius:7px;vertical-align:middle;margin-right:8px;">` : '';
             return `
                 <div class="item-linha">
-                    ${fotoManual}
-                    <div class="item-nome-wrap">
-                        <span class="item-nome">${prod.nome}</span>
+                    <div class="cel-nome">${fotoManual}<span class="item-nome" style="display:${fotoManual ? 'inline' : 'block'};">${prod.nome}</span>
                         ${desc ? `<span class="item-desc">${desc}</span>` : ''}
                     </div>
-                    <div class="item-pontilhado"></div>
-                    <div class="item-preco-wrap">
-                        <span class="item-preco">${precoPara(prod)}</span>
-                        ${botao}
-                    </div>
+                    <div class="cel-preco">${precoPara(prod)}</div>
+                    <div class="cel-botao">${botao}</div>
                 </div>`;
+        }
+
+        // Monta o conteúdo de um painel: se a categoria tem subcategorias
+        // definidas, agrupa e mostra um subtítulo + capa antes de cada grupo.
+        // Itens sem subcategoria reconhecida entram soltos, sem subtítulo.
+        function conteudoCategoria(cat, itens, modoPedido) {
+            const subs = SUBCATEGORIAS_CARDAPIO[cat];
+            if (!subs) return itens.map(p => linhaProduto(p, modoPedido)).join('');
+
+            let html = '';
+            subs.forEach(sub => {
+                const doSub = itens.filter(p => p.subcategoria === sub);
+                if (doSub.length === 0) return;
+                const capas = CAPAS_SUBCATEGORIA[sub];
+                if (capas) html += `<div class="subcategoria-titulo" style="grid-column:1/-1;">${sub}</div><div class="categoria-capa ${capas.length > 1 ? 'capa-4' : 'capa-1'}" style="grid-column:1/-1; margin-bottom:8px;">${capas.map(u => `<img src="${u}" alt="" loading="lazy" onerror="this.style.display='none'">`).join('')}</div>`;
+                else html += `<div class="subcategoria-titulo">${sub}</div>`;
+                html += doSub.map(p => linhaProduto(p, modoPedido)).join('');
+            });
+            // itens sem subcategoria reconhecida (produto antigo, ainda não editado)
+            const semSub = itens.filter(p => !subs.includes(p.subcategoria));
+            if (semSub.length > 0) html += semSub.map(p => linhaProduto(p, modoPedido)).join('');
+            return html;
         }
 
         function renderizarProdutos() {
@@ -326,7 +364,9 @@
             lista.innerHTML = categorias.map(cat => {
                 const itens = itensCardapio.filter(p => (p.categoria || 'Outros') === cat);
                 if (itens.length === 0) return '';
-                const capas = CAPAS_CATEGORIA[cat];
+                // capa de categoria inteira só quando NÃO tem subcategoria
+                // (Tabacaria); quando tem (Comida), a capa vai por subgrupo
+                const capas = !SUBCATEGORIAS_CARDAPIO[cat] ? CAPAS_CATEGORIA[cat] : null;
                 const capaHtml = capas
                     ? `<div class="categoria-capa ${capas.length > 1 ? 'capa-4' : 'capa-1'}">${capas.map(u => `<img src="${u}" alt="" loading="lazy" onerror="this.style.display='none'">`).join('')}</div>`
                     : '';
@@ -335,7 +375,7 @@
                     <div class="categoria-titulo-bar"><h2>${cat}</h2></div>
                     ${capaHtml}
                     <div class="categoria-itens">
-                        ${itens.map(p => linhaProduto(p, modoPedido)).join('')}
+                        ${conteudoCategoria(cat, itens, modoPedido)}
                     </div>
                 </div>`;
             }).join('');
