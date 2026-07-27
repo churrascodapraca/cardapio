@@ -274,6 +274,33 @@
         select.campo { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L2 4h8z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 34px; }
         .aviso-minimo { margin-top: 10px; background: rgba(220,38,38,0.12); border: 1px solid var(--brasa); border-radius: 10px; padding: 10px 13px; font-size: 12.5px; color: #fca5a5; }
     
+    
+        /* ===== CONTROLE DE QUANTIDADE [− 2 +] =====
+           Substitui o antigo "2 · +1", que confundia. Compacto pra caber na
+           coluna do botão mesmo em tela pequena ou com fonte aumentada. */
+        .qtd-controle {
+            display: inline-flex; align-items: center; gap: 0;
+            border: 1.5px solid var(--fogo); border-radius: 999px;
+            background: rgba(255,87,34,0.10); overflow: hidden;
+            max-width: 100%;
+        }
+        .qtd-btn {
+            appearance: none; border: none; background: transparent;
+            color: var(--fogo); font-family: var(--fonte-display); font-weight: 700;
+            font-size: 17px; line-height: 1; cursor: pointer;
+            min-width: 30px; height: 32px; padding: 0 2px;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s;
+        }
+        .qtd-btn:active { background: rgba(255,87,34,0.28); }
+        .qtd-btn.mais { color: #fff; background: var(--fogo); }
+        .qtd-btn.mais:active { background: var(--brasa); }
+        .qtd-num {
+            font-family: var(--fonte-mono); font-weight: 800; font-size: 14px;
+            color: var(--texto); min-width: 20px; text-align: center;
+            padding: 0 2px; user-select: none;
+        }
+    
     </style>
 </head>
 <body>
@@ -325,7 +352,8 @@
                 </div>
                 <div id="camposEntrega">
                     <input type="text" id="cliEndereco" class="campo" placeholder="Rua e número *" autocomplete="street-address">
-                    <select id="cliBairro" class="campo" onchange="recalcularCheckout()"></select>
+                    <select id="cliBairro" class="campo" onchange="aoTrocarBairro()"></select>
+                    <input type="text" id="cliBairroTexto" class="campo" style="display:none;" placeholder="Seu bairro *" oninput="recalcularCheckout()">
                     <input type="text" id="cliComplemento" class="campo" placeholder="Complemento (apto, bloco, casa...)">
                     <input type="text" id="cliReferencia" class="campo" placeholder="Ponto de referência (ajuda a achar)">
                 </div>
@@ -436,9 +464,20 @@
         // com o de todas as outras linhas, não importa o tamanho do nome.
         function linhaProduto(prod, modoPedido) {
             const qtdNoPedido = pedido[prod.id] ? pedido[prod.id].qtd : 0;
-            const botao = modoPedido
-                ? `<button class="btn-pedir" onclick="adicionarAoPedido(${prod.id})">${qtdNoPedido > 0 ? qtdNoPedido + ' · +1' : '+ Pedir'}</button>`
-                : `<button class="btn-pedir" onclick="alert('Chame o garçom e peça: ${String(prod.nome).replace(/'/g, "\\'")}')">Eu Quero</button>`;
+            // Com o item já no carrinho, o botão vira um controle de quantidade
+            // de verdade: [−] 2 [+]. Antes mostrava "2 · +1", que confundia.
+            let botao;
+            if (!modoPedido) {
+                botao = `<button class="btn-pedir" onclick="alert('Chame o garçom e peça: ${String(prod.nome).replace(/'/g, "\\'")}')">Eu Quero</button>`;
+            } else if (qtdNoPedido > 0) {
+                botao = `<div class="qtd-controle" role="group" aria-label="Quantidade de ${String(prod.nome).replace(/"/g, '')}">
+                    <button class="qtd-btn" onclick="tirarDoPedido(${prod.id})" aria-label="Tirar um">&#8722;</button>
+                    <span class="qtd-num">${qtdNoPedido}</span>
+                    <button class="qtd-btn mais" onclick="adicionarAoPedido(${prod.id})" aria-label="Adicionar um">&#43;</button>
+                </div>`;
+            } else {
+                botao = `<button class="btn-pedir" onclick="adicionarAoPedido(${prod.id})">+ Pedir</button>`;
+            }
             const desc = descricaoPara(prod);
             const fotoManual = prod.img ? `<img src="${prod.img}" alt="" style="width:38px;height:38px;object-fit:cover;border-radius:7px;vertical-align:middle;margin-right:8px;">` : '';
             return `
@@ -521,6 +560,23 @@
             if (!pedido[id]) pedido[id] = { nome: prod.nome, preco: Number(prod.precoVenda) || 0, qtd: 0, aPartirDe: !!(prod.temVariacoes || prod.tipo === 'porcionado') };
             pedido[id].qtd++;
             renderizarProdutos();
+            const ov = document.getElementById('checkoutOverlay');
+            if (ov && ov.classList.contains('aberto')) recalcularCheckout();
+        }
+
+        // Tira uma unidade do item. Chegando a zero, o item sai do carrinho e
+        // o botão volta a ser "+ Pedir".
+        function tirarDoPedido(id) {
+            if (!pedido[id]) return;
+            pedido[id].qtd--;
+            if (pedido[id].qtd <= 0) delete pedido[id];
+            renderizarProdutos();
+            // se o checkout estiver aberto, atualiza os valores na hora
+            const ov = document.getElementById('checkoutOverlay');
+            if (ov && ov.classList.contains('aberto')) {
+                if (Object.keys(pedido).length === 0) fecharCheckout();
+                else recalcularCheckout();
+            }
         }
 
         function limparPedido() {
@@ -565,7 +621,9 @@
             const ent = cfgEntrega();
             if (retirarNoLocal) return { valor: 0, retirada: true };
             const sel = document.getElementById('cliBairro');
-            const nomeBairro = sel ? sel.value : '';
+            // só cobra frete de bairro que ESTÁ na lista com taxa definida;
+            // bairro digitado à mão fica "a combinar" (frete 0 no total)
+            const nomeBairro = (sel && sel.style.display !== 'none') ? sel.value : '';
             const bairro = (ent.bairros || []).find(b => b.nome === nomeBairro);
             if (!bairro) return { valor: 0, semBairro: true };
             // frete grátis acima do valor configurado
@@ -580,13 +638,23 @@
             const ent = cfgEntrega();
             // popula o select de bairros
             const sel = document.getElementById('cliBairro');
+            const txt = document.getElementById('cliBairroTexto');
             const bairros = ent.bairros || [];
             if (bairros.length > 0) {
+                // tem lista: o cliente escolhe e já vê a taxa
                 sel.innerHTML = '<option value="">Escolha seu bairro *</option>' +
                     bairros.map(b => `<option value="${b.nome}">${b.nome} — R$ ${fmtPreco(b.taxa)}</option>`).join('') +
                     '<option value="__outro">Meu bairro não está na lista</option>';
+                sel.style.display = 'block';
+                txt.style.display = 'none';
+                txt.value = '';
             } else {
-                sel.innerHTML = '<option value="">Bairro (taxa combinada no WhatsApp)</option>';
+                // NENHUM bairro cadastrado: vira campo de texto livre, senão o
+                // cliente ficaria travado sem conseguir fechar o pedido.
+                sel.style.display = 'none';
+                sel.innerHTML = '';
+                txt.style.display = 'block';
+                txt.placeholder = 'Seu bairro * (taxa combinada no WhatsApp)';
             }
             // opção de retirada
             document.getElementById('opcaoRetirada').style.display = ent.permiteRetirada ? 'block' : 'none';
@@ -598,6 +666,30 @@
             document.body.style.overflow = 'hidden';
             escolherPagamento(formaPgtoEscolhida);
             recalcularCheckout();
+        }
+
+        // Quando o cliente escolhe "meu bairro não está na lista", abrimos o
+        // campo de texto pra ele digitar — assim o pedido nunca fica travado.
+        function aoTrocarBairro() {
+            const sel = document.getElementById('cliBairro');
+            const txt = document.getElementById('cliBairroTexto');
+            if (sel.value === '__outro') {
+                txt.style.display = 'block';
+                txt.placeholder = 'Digite seu bairro * (taxa combinada no WhatsApp)';
+            } else if (sel.style.display !== 'none') {
+                txt.style.display = 'none';
+                txt.value = '';
+            }
+            recalcularCheckout();
+        }
+
+        // Devolve o bairro informado, venha do select ou do campo de texto.
+        function bairroInformado() {
+            const sel = document.getElementById('cliBairro');
+            const txt = document.getElementById('cliBairroTexto');
+            if (txt && txt.style.display !== 'none' && txt.value.trim()) return txt.value.trim();
+            if (sel && sel.style.display !== 'none' && sel.value && sel.value !== '__outro') return sel.value;
+            return '';
         }
 
         function toggleRetirada() {
@@ -623,6 +715,17 @@
         }
 
         function recalcularCheckout() {
+            // Blindagem: se qualquer coisa der errado no meio do cálculo, o
+            // botão de enviar NÃO pode ficar morto — o cliente perderia o pedido.
+            try { return recalcularCheckoutInterno(); }
+            catch (e) {
+                console.error('Erro ao recalcular o checkout:', e);
+                const b = document.querySelector('.btn-enviar-pedido');
+                if (b) { b.disabled = false; b.style.opacity = '1'; b.style.pointerEvents = 'auto'; }
+            }
+        }
+
+        function recalcularCheckoutInterno() {
             const itens = itensDoPedido();
             const sub = subtotalPedido();
             const ent = cfgEntrega();
@@ -711,7 +814,7 @@
             // valida obrigatórios — retirada não exige endereço
             const obrigatorios = retirarNoLocal
                 ? [['cliNome', 'seu nome'], ['cliTelefone', 'seu WhatsApp']]
-                : [['cliNome', 'seu nome'], ['cliTelefone', 'seu WhatsApp'], ['cliEndereco', 'a rua e o número'], ['cliBairro', 'o bairro']];
+                : [['cliNome', 'seu nome'], ['cliTelefone', 'seu WhatsApp'], ['cliEndereco', 'a rua e o número']];
             let faltando = [];
             obrigatorios.forEach(([id, rotulo]) => {
                 const el = document.getElementById(id);
@@ -719,6 +822,15 @@
                 el.classList.toggle('faltando', vazio);
                 if (vazio) faltando.push(rotulo);
             });
+            // bairro: aceita tanto o escolhido na lista quanto o digitado
+            if (!retirarNoLocal) {
+                const selB = document.getElementById('cliBairro');
+                const txtB = document.getElementById('cliBairroTexto');
+                const temBairro = !!bairroInformado();
+                const campoVisivel = (txtB.style.display !== 'none') ? txtB : selB;
+                campoVisivel.classList.toggle('faltando', !temBairro);
+                if (!temBairro) faltando.push('o bairro');
+            }
             if (faltando.length) {
                 alert('Ainda falta: ' + faltando.join(', ') + '.');
                 const primeiro = document.querySelector('.campo.faltando');
@@ -729,8 +841,7 @@
             const nome = document.getElementById('cliNome').value.trim();
             const tel = document.getElementById('cliTelefone').value.trim();
             const endereco = document.getElementById('cliEndereco').value.trim();
-            const bairroSel = document.getElementById('cliBairro');
-            const bairro = bairroSel.value === '__outro' ? 'não listado (combinar)' : bairroSel.value;
+            const bairro = bairroInformado() || 'não informado';
             const compl = document.getElementById('cliComplemento').value.trim();
             const refer = document.getElementById('cliReferencia').value.trim();
             const obs = document.getElementById('cliObs').value.trim();
