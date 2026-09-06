@@ -626,6 +626,16 @@
         .aviso-papel p { font-size: 11px; line-height: 1.45; text-transform: uppercase; margin: 0; }
         @media (max-width: 420px) { .avisos-papel { grid-template-columns: 1fr; } }
 
+        .aviso-delivery-off {
+            background: rgba(198,54,26,.14); border: 1px solid rgba(198,54,26,.5);
+            border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; text-align: center;
+        }
+        .aviso-delivery-off strong { display: block; font-size: 15px; color: #fca5a5; margin-bottom: 5px; }
+        .aviso-delivery-off span { display: block; font-size: 12.5px; color: #F4E6D4; }
+        .aviso-delivery-off em {
+            display: block; font-size: 11px; color: #8A8279; margin-top: 7px; font-style: normal;
+        }
+
         /* respeita quem prefere menos movimento */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -963,7 +973,21 @@
             // o cliente vê no celular o mesmo que está na mesa.
             if (cardapioPapel && (cardapioPapel.secoes || []).length) {
                 document.body.classList.add('modo-papel');
-                lista.innerHTML = desenharPapel(cardapioPapel, modoPedido);
+                // Se veio pelo link do DELIVERY mas os pedidos estão desligados,
+                // a página fica igual ao cardápio comum e ninguém entende por quê.
+                // Melhor dizer na cara: o pedido não está no ar.
+                let alerta = '';
+                if (MODO_DELIVERY && !modoPedido) {
+                    const semTel = !configCardapio.telefone;
+                    alerta = `<div class="aviso-delivery-off">
+                        <strong>🛵 O pedido online está desligado</strong>
+                        <span>${semTel
+                            ? 'Falta o número do WhatsApp que recebe os pedidos.'
+                            : 'Os pedidos pelo WhatsApp estão desativados.'}</span>
+                        <em>Ligue em: Cardápio → Digital → Pedidos pelo WhatsApp</em>
+                    </div>`;
+                }
+                lista.innerHTML = alerta + desenharPapel(cardapioPapel, modoPedido);
                 atualizarBarraPedido();
                 return;
             }
