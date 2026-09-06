@@ -535,6 +535,97 @@
             box-shadow: 0 4px 22px -6px rgba(232,73,42,.7), inset 0 1px 0 rgba(255,255,255,.2) !important;
         }
 
+        /* ====================================================================
+           CARDÁPIO IGUAL AO PAPEL
+           --------------------------------------------------------------------
+           As mesmas seções, as mesmas fotos, os mesmos nomes. O cliente vê
+           no celular o que está na mesa. A diferença é o botão de pedir.
+           ==================================================================== */
+        .sec-papel {
+            background: linear-gradient(155deg, rgba(28,25,33,.78), rgba(12,11,15,.9));
+            backdrop-filter: blur(18px) saturate(1.3);
+            -webkit-backdrop-filter: blur(18px) saturate(1.3);
+            border: 1px solid rgba(217,160,60,.22);
+            border-radius: 18px; overflow: hidden; margin-bottom: 16px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 10px 34px -16px rgba(0,0,0,.85);
+            animation: entrar .5s cubic-bezier(.22,1,.36,1) backwards;
+        }
+        .sec-foto { width: 100%; height: 116px; position: relative; overflow: hidden; }
+        .sec-foto img { width: 100%; height: 100%; object-fit: cover; object-position: center 40%; display: block; }
+        .sec-foto::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(180deg, rgba(10,7,8,.15) 0%, rgba(10,7,8,.55) 55%, rgba(12,11,15,.95) 100%);
+        }
+        .sec-titulo {
+            position: relative; text-align: center; padding: 13px 16px 9px;
+        }
+        .sec-foto + .sec-titulo { margin-top: -46px; padding-top: 0; z-index: 2; }
+        .sec-titulo h2 {
+            font-size: 21px; font-weight: 900; letter-spacing: .8px;
+            text-transform: uppercase; color: var(--fogo);
+            text-shadow: 0 2px 14px rgba(232,73,42,.55), 0 1px 3px rgba(0,0,0,.9);
+            margin: 0;
+        }
+        .sec-selo {
+            display: inline-block; margin-top: 6px; border: 1px solid var(--ouro, #D9A03C);
+            border-radius: 99px; padding: 2px 13px; font-size: 11px;
+            letter-spacing: 1.6px; color: var(--ouro, #D9A03C); text-transform: uppercase;
+        }
+        .sec-corpo { padding: 4px 14px 14px; }
+
+        .lin-papel {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 11px 2px; border-bottom: 1px dashed rgba(244,230,212,.10);
+        }
+        .lin-papel:last-child { border-bottom: none; }
+        .lin-info { flex: 1; min-width: 0; }
+        .lin-nome {
+            font-size: 14.5px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .3px; line-height: 1.25;
+        }
+        .lin-obs {
+            font-size: 11px; color: var(--ouro, #D9A03C); text-transform: uppercase;
+            letter-spacing: .3px; margin-top: 3px; line-height: 1.35;
+        }
+        .lin-precos { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+        .pr-linha { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+        .pr-rot {
+            font-size: 9.5px; letter-spacing: .6px; color: #8A8279;
+            text-transform: uppercase; text-align: right; line-height: 1.1; max-width: 76px;
+        }
+        .pr-valor {
+            font-size: 15px; font-weight: 800; color: #10B981; white-space: nowrap;
+            font-variant-numeric: tabular-nums; text-shadow: 0 0 16px rgba(16,185,129,.3);
+        }
+        .pr-pedir {
+            background: linear-gradient(135deg, var(--fogo), #FF6B45); border: none; color: #fff;
+            border-radius: 9px; padding: 7px 13px; font-size: 12px; font-weight: 800;
+            cursor: pointer; white-space: nowrap; flex-shrink: 0;
+            box-shadow: 0 3px 14px -4px rgba(232,73,42,.7);
+            transition: transform .14s cubic-bezier(.34,1.5,.5,1), box-shadow .2s;
+        }
+        .pr-pedir:active { transform: scale(.9); }
+        .pr-esgotado {
+            font-size: 10px; font-weight: 800; letter-spacing: .5px;
+            color: #fca5a5; background: rgba(198,54,26,.2);
+            border: 1px solid rgba(198,54,26,.5); border-radius: 99px; padding: 4px 10px;
+            white-space: nowrap;
+        }
+        .lin-papel.sem-estoque { opacity: .45; }
+
+        /* avisos e rodapé, iguais ao papel */
+        .avisos-papel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 14px; }
+        .aviso-papel {
+            border: 1px solid rgba(217,160,60,.25); border-radius: 12px;
+            padding: 11px 12px; text-align: center; background: rgba(0,0,0,.35);
+        }
+        .aviso-papel b {
+            display: block; color: var(--ouro, #D9A03C); font-size: 11.5px;
+            letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;
+        }
+        .aviso-papel p { font-size: 11px; line-height: 1.45; text-transform: uppercase; margin: 0; }
+        @media (max-width: 420px) { .avisos-papel { grid-template-columns: 1fr; } }
+
         /* respeita quem prefere menos movimento */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -692,6 +783,8 @@
         const MODO_DELIVERY = /(\?|&)delivery\b/i.test(location.search) ||
                               /delivery/i.test(location.hash);
         let itensCardapio = [];
+        // a estrutura do cardápio FÍSICO (seções, fotos, dois preços)
+        let cardapioPapel = null;
         let abaAtiva = 'Tudo';
         let pedido = {}; // id -> {nome, preco, qtd} (modo pedido WhatsApp)
         const ORDEM_ABAS = ['Comida', 'Bebidas', 'Copões', 'Tabacaria', 'Doces & Balas', 'Outros'];
@@ -773,6 +866,65 @@
         // Monta o conteúdo de um painel: se a categoria tem subcategorias
         // definidas, agrupa e mostra um subtítulo + capa antes de cada grupo.
         // Itens sem subcategoria reconhecida entram soltos, sem subtítulo.
+        /* ====================================================================
+           MODO PAPEL — desenha o cardápio igual ao impresso
+           --------------------------------------------------------------------
+           Quando o sistema publica a estrutura do cardápio físico, usamos ela.
+           Assim o cliente vê no celular exatamente o que está na mesa: as
+           mesmas seções, as mesmas fotos, os mesmos nomes e os dois preços
+           lado a lado quando é o caso.
+           ==================================================================== */
+        function desenharPapel(cardapio, modoPedido) {
+            if (!cardapio || !(cardapio.secoes || []).length) return '';
+            let html = '';
+            cardapio.secoes.forEach((s, i) => {
+                const atraso = Math.min(i * 0.05, 0.4);
+                html += `<div class="sec-papel" style="animation-delay:${atraso}s">`;
+                if (s.foto) {
+                    html += `<div class="sec-foto"><img src="${s.foto}" alt="" loading="lazy"
+                             onerror="this.parentNode.style.display='none'"></div>`;
+                }
+                html += `<div class="sec-titulo"><h2>${s.titulo}</h2>` +
+                        (s.selo ? `<span class="sec-selo">${s.selo}</span>` : '') + `</div>`;
+                html += `<div class="sec-corpo">`;
+                (s.linhas || []).forEach(l => {
+                    const todosEsgotados = (l.precos || []).every(p => p.esgotado);
+                    html += `<div class="lin-papel${todosEsgotados ? ' sem-estoque' : ''}">
+                        <div class="lin-info">
+                            <div class="lin-nome">${l.nome}</div>
+                            ${l.obs ? `<div class="lin-obs">${l.obs}</div>` : ''}
+                        </div>
+                        <div class="lin-precos">
+                            ${(l.precos || []).map(p => `
+                                <div class="pr-linha">
+                                    ${p.rotulo ? `<span class="pr-rot">${p.rotulo}</span>` : ''}
+                                    <span class="pr-valor">${fmtPreco(p.valor)}</span>
+                                    ${p.esgotado
+                                        ? `<span class="pr-esgotado">esgotado</span>`
+                                        : (modoPedido && p.id
+                                            ? `<button class="pr-pedir" onclick="pedirDoPapel(${p.id})">+ Pedir</button>`
+                                            : '')}
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            });
+            if ((cardapio.avisos || []).length) {
+                html += `<div class="avisos-papel">` +
+                    cardapio.avisos.map(a => `<div class="aviso-papel"><b>${a.titulo}</b><p>${a.texto}</p></div>`).join('') +
+                    `</div>`;
+            }
+            return html;
+        }
+
+        // O botão de pedir precisa do produto na lista plana — é ela que
+        // carrega preço, categoria e o resto pro carrinho.
+        function pedirDoPapel(id) {
+            const p = (itensCardapio || []).find(x => Number(x.id) === Number(id));
+            if (p) adicionarAoPedido(p);
+        }
+
         function conteudoCategoria(cat, itens, modoPedido) {
             const subs = SUBCATEGORIAS_CARDAPIO[cat];
             if (!subs) return itens.map(p => linhaProduto(p, modoPedido)).join('');
@@ -806,6 +958,15 @@
             msg.style.display = 'none';
             // no modo CARDÁPIO ninguém monta pedido — é só consulta
             const modoPedido = MODO_DELIVERY && configCardapio.pedidosZap && configCardapio.telefone;
+
+            // Se o sistema publicou a estrutura do cardápio FÍSICO, usamos ela:
+            // o cliente vê no celular o mesmo que está na mesa.
+            if (cardapioPapel && (cardapioPapel.secoes || []).length) {
+                document.body.classList.add('modo-papel');
+                lista.innerHTML = desenharPapel(cardapioPapel, modoPedido);
+                atualizarBarraPedido();
+                return;
+            }
             // com delivery ligado, o cardápio fala de entrega em vez de garçom
             const sub = document.getElementById('subtituloHeader');
             if (sub) sub.innerHTML = MODO_DELIVERY
@@ -1198,6 +1359,7 @@
                 } else {
                     itensCardapio = dados.itens || [];
                     configCardapio = dados.config || { pedidosZap: false, telefone: '', taxaCredito: 5, taxaDebito: 5 };
+                    cardapioPapel = dados.cardapio || null;
                 }
                 renderizarAbas();
                 renderizarProdutos();
