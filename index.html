@@ -931,8 +931,17 @@
         // O botão de pedir precisa do produto na lista plana — é ela que
         // carrega preço, categoria e o resto pro carrinho.
         function pedirDoPapel(id) {
-            const p = (itensCardapio || []).find(x => Number(x.id) === Number(id));
-            if (p) adicionarAoPedido(p);
+            // BUG CORRIGIDO: adicionarAoPedido espera o ID, não o objeto do
+            // produto. Passando o objeto, o find() lá dentro não achava nada
+            // e o clique não fazia absolutamente nada.
+            const n = Number(id);
+            const p = (itensCardapio || []).find(x => Number(x.id) === n);
+            if (!p) {
+                alert('Esse item não está disponível para pedido agora.\n\n' +
+                      'Chame no WhatsApp que a gente resolve.');
+                return;
+            }
+            adicionarAoPedido(p.id);
         }
 
         function conteudoCategoria(cat, itens, modoPedido) {
